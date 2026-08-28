@@ -38,18 +38,20 @@ public class AuthController {
                     .body("Email already registered");
         }
 
-      user.setRole(user.getRole().toUpperCase());
+        user.setRole(user.getRole().toUpperCase());
 
-if (!user.getRole().equals("STUDENT")
-        && !user.getRole().equals("TUTOR")) {
+        if (!user.getRole().equals("PARENT")
+                && !user.getRole().equals("TUTOR")) {
 
-    return ResponseEntity.badRequest()
-            .body("Role must be STUDENT or TUTOR");
-}
+            return ResponseEntity.badRequest()
+                    .body("Role must be PARENT or TUTOR");
+        }
 
-user.setPassword(passwordEncoder.encode(user.getPassword()));
+        user.setPassword(
+                passwordEncoder.encode(user.getPassword())
+        );
 
-userRepository.save(user);
+        userRepository.save(user);
 
         return ResponseEntity.ok("User registered successfully");
     }

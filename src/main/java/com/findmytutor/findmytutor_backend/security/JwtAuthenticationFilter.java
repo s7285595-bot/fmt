@@ -13,7 +13,6 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
@@ -39,21 +38,38 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String token = authHeader.substring(7);
 
-        if (jwtService.isTokenValid(token)) {
+      if (jwtService.isTokenValid(token)) {
 
-            String email = jwtService.extractEmail(token);
-            String role = jwtService.extractRole(token);
+    String email = jwtService.extractEmail(token);
+    String role = jwtService.extractRole(token);
 
-            UsernamePasswordAuthenticationToken authentication =
-                    new UsernamePasswordAuthenticationToken(
-                            email,
-                            null,
-                            List.of(new SimpleGrantedAuthority("ROLE_" + role))
-                    );
+    System.out.println("=================================");
+    System.out.println("REQUEST = " + request.getMethod()
+            + " " + request.getRequestURI());
+    System.out.println("JWT EMAIL = " + email);
+    System.out.println("JWT ROLE = " + role);
 
-            SecurityContextHolder.getContext()
-                    .setAuthentication(authentication);
-        }
+    UsernamePasswordAuthenticationToken authentication =
+            new UsernamePasswordAuthenticationToken(
+                    email,
+                    null,
+                    List.of(
+                            new SimpleGrantedAuthority("ROLE_" + role)
+                    )
+            );
+
+    SecurityContextHolder.getContext()
+            .setAuthentication(authentication);
+
+    System.out.println(
+            "SPRING AUTHORITIES = "
+            + SecurityContextHolder.getContext()
+                    .getAuthentication()
+                    .getAuthorities()
+    );
+
+    System.out.println("=================================");
+}
 
         filterChain.doFilter(request, response);
     }
