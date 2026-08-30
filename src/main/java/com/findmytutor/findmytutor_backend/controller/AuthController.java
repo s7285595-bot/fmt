@@ -29,56 +29,154 @@ public class AuthController {
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
     }
+@PostMapping("/register")
+public ResponseEntity<?> register(@RequestBody User user) {
 
-    @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody User user) {
+    if (userRepository.existsByEmail(user.getEmail())) {
+        return ResponseEntity.badRequest()
+                .body("Email already registered");
+    }
 
-        if (userRepository.existsByEmail(user.getEmail())) {
-            return ResponseEntity.badRequest()
-                    .body("Email already registered");
-        }
+    if (user.getRole() == null) {
+        return ResponseEntity.badRequest()
+                .body("Role is required");
+    }
 
-        user.setRole(user.getRole().toUpperCase());
+    user.setRole(user.getRole().toUpperCase());
 
-        if (!user.getRole().equals("PARENT")
-                && !user.getRole().equals("TUTOR")) {
+    // Public registration only allows PARENT or TUTOR
+    if (!user.getRole().equals("PARENT")
+            && !user.getRole().equals("TUTOR")) {
 
-            return ResponseEntity.badRequest()
-                    .body("Role must be PARENT or TUTOR");
-        }
+        return ResponseEntity.badRequest()
+                .body("Role must be PARENT or TUTOR");
+    }
 
-        user.setPassword(
-                passwordEncoder.encode(user.getPassword())
+    user.setPassword(
+            passwordEncoder.encode(user.getPassword())
+    );
+
+    // Parent can use the app immediately
+   if (user.getRole().equals("PARENT")) {
+    user.setStatus("APPROVED");
+}
+
+    // Tutor must wait for admin approval
+    if (user.getRole().equals("TUTOR")) {
+        user.setStatus("PENDING");
+    }
+
+    userRepository.save(user);
+
+    if (user.getRole().equals("TUTOR")) {
+        return ResponseEntity.ok(
+                "Tutor registration submitted. Await admin approval."
         );
-
-        userRepository.save(user);
-
-        return ResponseEntity.ok("User registered successfully");
     }
 
-    @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
+    return ResponseEntity.ok(
+            "Parent registered successfully."
+    );
+}
 
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElse(null);
+ @PostMapping("/login")
+public ResponseEntity<?> login(@RequestBody LoginRequest request) {
 
-        if (user == null) {
-            return ResponseEntity.status(401)
-                    .body("Invalid email or password");
-        }
+    User user = userRepository.findByEmail(request.getEmail())
+            .orElse(null);
 
-        if (!passwordEncoder.matches(
-                request.getPassword(),
-                user.getPassword())) {
-
-            return ResponseEntity.status(401)
-                    .body("Invalid email or password");
-        }
-
-        String token = jwtService.generateToken(
-                user.getEmail(),
-                user.getRole());
-
-        return ResponseEntity.ok(token);
+    if (user == null) {
+        return ResponseEntity.status(401)
+                .body("Invalid email or password");
     }
+
+    if (!passwordEncoder.matches(
+            request.getPassword(),
+            user.getPassword())) {
+
+        return ResponseEntity.status(401)
+                .body("Invalid email or password");
+    }
+
+    /*
+     * =========================
+     * TUTOR ACCOUNT STATUS
+     * =========================
+     */
+
+    if ("TUTOR".equals(user.getRole())) {
+
+        if ("PENDING".equals(user.getStatus())) {
+            return ResponseEntity.status(403)
+                    .body(
+                        "Your tutor application is under review. " +
+                        "Please wait for admin approval."
+                    );
+        }
+
+        if ("REJECTED".equals(user.getStatus())) {
+            return ResponseEntity.status(403)
+                    .body(
+                        "Your tutor application has been rejected."
+                    );
+        }
+
+        if ("SUSPENDED".equals(user.getStatus())) {
+            return ResponseEntity.status(403)
+                    .body(
+                        "Your tutor account has been suspended. " +
+                        "Please contact support."
+                    );
+        }
+
+        if ("BLOCKED".equals(user.getStatus())) {
+            return ResponseEntity.status(403)
+                    .body(
+                        "Your tutor account has been blocked."
+                    );
+
+        }
+
+        if (!"APPROVED".equals(user.getStatus())) {
+            return ResponseEntity.status(403)
+                    .body(
+                        "Your tutor account is not approved yet."
+                    );
+        }
+    }
+
+    /*
+     * =========================
+     * PARENT ACCOUNT STATUS
+     * =========================
+     */
+
+    if ("SUSPENDED".equals(user.getStatus())) {
+        return ResponseEntity.status(403)
+                .body(
+                    "Your account has been suspended. " +
+                    "Please contact support."
+                );
+    }
+
+    if ("BLOCKED".equals(user.getStatus())) {
+        return ResponseEntity.status(403)
+                .body(
+                    "Your account has been blocked."
+                );
+    }
+
+    /*
+     * =========================
+     * GENERATE JWT
+     * =========================
+     */
+
+    String token = jwtService.generateToken(
+            user.getEmail(),
+            user.getRole()
+    );
+
+    return ResponseEntity.ok(token);
+}
 }

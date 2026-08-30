@@ -61,9 +61,42 @@ public class SecurityConfig {
                                 HttpMethod.GET,
                                 "/api/tutors/profile"
                         ).hasRole("TUTOR")
+                        
+
+
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+
+// Parent request APIs
+.requestMatchers(
+        HttpMethod.POST,
+        "/api/requests/tutor/**"
+).hasRole("PARENT")
+
+.requestMatchers(
+        HttpMethod.GET,
+        "/api/requests/parent"
+).hasRole("PARENT")
+
+// Tutor request APIs
+.requestMatchers(
+        HttpMethod.GET,
+        "/api/requests/tutor"
+).hasRole("TUTOR")
+
+.requestMatchers(
+        HttpMethod.POST,
+        "/api/requests/*/accept"
+).hasRole("TUTOR")
+
+.requestMatchers(
+        HttpMethod.POST,
+        "/api/requests/*/reject"
+).hasRole("TUTOR")
+
+.anyRequest().authenticated()
 
                         // Everything else requires authentication
-                        .anyRequest().authenticated()
+                        // .anyRequest().authenticated()
                 )
 
                 .addFilterBefore(

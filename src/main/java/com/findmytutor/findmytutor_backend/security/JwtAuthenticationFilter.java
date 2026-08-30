@@ -22,55 +22,61 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         this.jwtService = jwtService;
     }
 
-    @Override
-    protected void doFilterInternal(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            FilterChain filterChain)
-            throws ServletException, IOException {
+  @Override
+protected void doFilterInternal(
+        HttpServletRequest request,
+        HttpServletResponse response,
+        FilterChain filterChain)
+        throws ServletException, IOException {
 
-        String authHeader = request.getHeader("Authorization");
-
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
-        String token = authHeader.substring(7);
-
-      if (jwtService.isTokenValid(token)) {
-
-    String email = jwtService.extractEmail(token);
-    String role = jwtService.extractRole(token);
-
-    System.out.println("=================================");
-    System.out.println("REQUEST = " + request.getMethod()
-            + " " + request.getRequestURI());
-    System.out.println("JWT EMAIL = " + email);
-    System.out.println("JWT ROLE = " + role);
-
-    UsernamePasswordAuthenticationToken authentication =
-            new UsernamePasswordAuthenticationToken(
-                    email,
-                    null,
-                    List.of(
-                            new SimpleGrantedAuthority("ROLE_" + role)
-                    )
-            );
-
-    SecurityContextHolder.getContext()
-            .setAuthentication(authentication);
-
-    System.out.println(
-            "SPRING AUTHORITIES = "
-            + SecurityContextHolder.getContext()
-                    .getAuthentication()
-                    .getAuthorities()
-    );
-
-    System.out.println("=================================");
-}
-
+    // Authentication endpoints do not need JWT
+    if (request.getRequestURI().startsWith("/api/auth/")) {
         filterChain.doFilter(request, response);
+        return;
     }
+
+    String authHeader = request.getHeader("Authorization");
+
+    if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+        filterChain.doFilter(request, response);
+        return;
+    }
+
+    String token = authHeader.substring(7);
+
+    if (jwtService.isTokenValid(token)) {
+
+        String email = jwtService.extractEmail(token);
+        String role = jwtService.extractRole(token);
+
+        System.out.println("=================================");
+        System.out.println("REQUEST = " + request.getMethod()
+                + " " + request.getRequestURI());
+        System.out.println("JWT EMAIL = " + email);
+        System.out.println("JWT ROLE = " + role);
+
+        UsernamePasswordAuthenticationToken authentication =
+                new UsernamePasswordAuthenticationToken(
+                        email,
+                        null,
+                        List.of(
+                                new SimpleGrantedAuthority("ROLE_" + role)
+                        )
+                );
+
+        SecurityContextHolder.getContext()
+                .setAuthentication(authentication);
+
+        System.out.println(
+                "SPRING AUTHORITIES = "
+                        + SecurityContextHolder.getContext()
+                                .getAuthentication()
+                                .getAuthorities()
+        );
+
+        System.out.println("=================================");
+    }
+
+    filterChain.doFilter(request, response);
+}
 }

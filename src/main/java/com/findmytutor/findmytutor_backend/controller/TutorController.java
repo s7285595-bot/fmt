@@ -98,7 +98,12 @@ public ResponseEntity<?> getAllTutors(
 @RequestParam(required = false) Double maxFee
     ) {
 
-    List<Tutor> tutors = tutorRepository.findAll();
+  List<Tutor> tutors = tutorRepository.findAll()
+        .stream()
+        .filter(tutor ->
+                "APPROVED".equals(tutor.getUser().getStatus())
+        )
+        .toList();
 
     if (subject != null && !subject.isBlank()) {
         tutors = tutors.stream()
@@ -225,11 +230,14 @@ public ResponseEntity<?> getNearbyTutors(
         @RequestParam double longitude,
         @RequestParam(defaultValue = "5") double radius) {
 
-    List<NearbyTutorResponse> nearbyTutors = tutorRepository.findAll()
-            .stream()
-            .filter(tutor ->
-                    tutor.getLatitude() != null &&
-                    tutor.getLongitude() != null)
+  List<NearbyTutorResponse> nearbyTutors = tutorRepository.findAll()
+        .stream()
+        .filter(tutor ->
+                "APPROVED".equals(tutor.getUser().getStatus())
+        )
+        .filter(tutor ->
+                tutor.getLatitude() != null &&
+                tutor.getLongitude() != null)
             .map(tutor -> {
 
                 double distance = calculateDistance(
