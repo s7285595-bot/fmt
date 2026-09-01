@@ -11,6 +11,7 @@ import com.findmytutor.findmytutor_backend.dto.LoginRequest;
 import com.findmytutor.findmytutor_backend.model.User;
 import com.findmytutor.findmytutor_backend.repository.UserRepository;
 import com.findmytutor.findmytutor_backend.security.JwtService;
+import com.findmytutor.findmytutor_backend.service.PasswordResetService;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -19,164 +20,284 @@ public class AuthController {
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final PasswordResetService passwordResetService;
 
     public AuthController(
             UserRepository userRepository,
             BCryptPasswordEncoder passwordEncoder,
-            JwtService jwtService) {
+            JwtService jwtService,
+            PasswordResetService passwordResetService) {
 
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
-    }
-@PostMapping("/register")
-public ResponseEntity<?> register(@RequestBody User user) {
-
-    if (userRepository.existsByEmail(user.getEmail())) {
-        return ResponseEntity.badRequest()
-                .body("Email already registered");
+        this.passwordResetService = passwordResetService;
     }
 
-    if (user.getRole() == null) {
-        return ResponseEntity.badRequest()
-                .body("Role is required");
-    }
+    @PostMapping("/register")
+    public ResponseEntity<?> register(@RequestBody User user) {
 
-    user.setRole(user.getRole().toUpperCase());
+        if (userRepository.existsByEmail(user.getEmail())) {
+            return ResponseEntity.badRequest()
+                    .body("Email already registered");
+        }
 
-    // Public registration only allows PARENT or TUTOR
-    if (!user.getRole().equals("PARENT")
-            && !user.getRole().equals("TUTOR")) {
+        if (user.getRole() == null) {
+            return ResponseEntity.badRequest()
+                    .body("Role is required");
+        }
 
-        return ResponseEntity.badRequest()
-                .body("Role must be PARENT or TUTOR");
-    }
+        user.setRole(user.getRole().toUpperCase());
 
-    user.setPassword(
-            passwordEncoder.encode(user.getPassword())
-    );
+        // Public registration only allows PARENT or TUTOR
+        if (!user.getRole().equals("PARENT")
+                && !user.getRole().equals("TUTOR")) {
 
-    // Parent can use the app immediately
-   if (user.getRole().equals("PARENT")) {
-    user.setStatus("APPROVED");
-}
+            return ResponseEntity.badRequest()
+                    .body("Role must be PARENT or TUTOR");
+        }
 
-    // Tutor must wait for admin approval
-    if (user.getRole().equals("TUTOR")) {
-        user.setStatus("PENDING");
-    }
+        user.setPassword(
+                passwordEncoder.encode(user.getPassword())
+        );
 
-    userRepository.save(user);
+        // Parent can use the app immediately
+        if (user.getRole().equals("PARENT")) {
+            user.setStatus("APPROVED");
+        }
 
-    if (user.getRole().equals("TUTOR")) {
+        // Tutor must wait for admin approval
+        if (user.getRole().equals("TUTOR")) {
+            user.setStatus("PENDING");
+        }
+
+        userRepository.save(user);
+
+        if (user.getRole().equals("TUTOR")) {
+            return ResponseEntity.ok(
+                    "Tutor registration submitted. Await admin approval."
+            );
+        }
+
         return ResponseEntity.ok(
-                "Tutor registration submitted. Await admin approval."
+                "Parent registered successfully."
         );
     }
 
-    return ResponseEntity.ok(
-            "Parent registered successfully."
-    );
-}
+    @PostMapping("/login")
+    public ResponseEntity<?> login(
+            @RequestBody LoginRequest request) {
 
- @PostMapping("/login")
-public ResponseEntity<?> login(@RequestBody LoginRequest request) {
+        User user = userRepository
+                .findByEmail(request.getEmail())
+                .orElse(null);
 
-    User user = userRepository.findByEmail(request.getEmail())
-            .orElse(null);
-
-    if (user == null) {
-        return ResponseEntity.status(401)
-                .body("Invalid email or password");
-    }
-
-    if (!passwordEncoder.matches(
-            request.getPassword(),
-            user.getPassword())) {
-
-        return ResponseEntity.status(401)
-                .body("Invalid email or password");
-    }
-
-    /*
-     * =========================
-     * TUTOR ACCOUNT STATUS
-     * =========================
-     */
-
-    if ("TUTOR".equals(user.getRole())) {
-
-        if ("PENDING".equals(user.getStatus())) {
-            return ResponseEntity.status(403)
-                    .body(
-                        "Your tutor application is under review. " +
-                        "Please wait for admin approval."
-                    );
+        if (user == null) {
+            return ResponseEntity.status(401)
+                    .body("Invalid email or password");
         }
 
-        if ("REJECTED".equals(user.getStatus())) {
-            return ResponseEntity.status(403)
-                    .body(
-                        "Your tutor application has been rejected."
-                    );
+        if (!passwordEncoder.matches(
+                request.getPassword(),
+                user.getPassword())) {
+
+            return ResponseEntity.status(401)
+                    .body("Invalid email or password");
         }
+
+        /*
+         * =========================
+         * TUTOR ACCOUNT STATUS
+         * =========================
+         */
+
+        if ("TUTOR".equals(user.getRole())) {
+
+            if ("PENDING".equals(user.getStatus())) {
+                return ResponseEntity.status(403)
+                        .body(
+                                "Your tutor application is under review. " +
+                                "Please wait for admin approval."
+                        );
+            }
+
+            if ("REJECTED".equals(user.getStatus())) {
+                return ResponseEntity.status(403)
+                        .body(
+                                "Your tutor application has been rejected."
+                        );
+            }
+
+            if ("SUSPENDED".equals(user.getStatus())) {
+                return ResponseEntity.status(403)
+                        .body(
+                                "Your tutor account has been suspended. " +
+                                "Please contact support."
+                        );
+            }
+
+            if ("BLOCKED".equals(user.getStatus())) {
+                return ResponseEntity.status(403)
+                        .body(
+                                "Your tutor account has been blocked."
+                        );
+            }
+
+            if (!"APPROVED".equals(user.getStatus())) {
+                return ResponseEntity.status(403)
+                        .body(
+                                "Your tutor account is not approved yet."
+                        );
+            }
+        }
+
+        /*
+         * =========================
+         * PARENT ACCOUNT STATUS
+         * =========================
+         */
 
         if ("SUSPENDED".equals(user.getStatus())) {
             return ResponseEntity.status(403)
                     .body(
-                        "Your tutor account has been suspended. " +
-                        "Please contact support."
+                            "Your account has been suspended. " +
+                            "Please contact support."
                     );
         }
 
         if ("BLOCKED".equals(user.getStatus())) {
             return ResponseEntity.status(403)
                     .body(
-                        "Your tutor account has been blocked."
+                            "Your account has been blocked."
                     );
-
         }
 
-        if (!"APPROVED".equals(user.getStatus())) {
-            return ResponseEntity.status(403)
+        /*
+         * =========================
+         * GENERATE JWT
+         * =========================
+         */
+
+        String token = jwtService.generateToken(
+                user.getEmail(),
+                user.getRole()
+        );
+
+        return ResponseEntity.ok(token);
+    }
+
+    /*
+     * =========================
+     * FORGOT PASSWORD
+     * =========================
+     */
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(
+            @RequestBody ForgotPasswordRequest request) {
+
+        String token = passwordResetService
+                .createResetToken(request.getEmail());
+
+        if (token == null) {
+            return ResponseEntity.ok(
+                    "If an account exists with this email, " +
+                    "a password reset link has been created."
+            );
+        }
+
+        /*
+         * Temporary development response.
+         *
+         * We will replace this with an email
+         * after SMTP/email configuration is added.
+         */
+        return ResponseEntity.ok(
+                "Password reset token created: " + token
+        );
+    }
+
+    /*
+     * =========================
+     * RESET PASSWORD
+     * =========================
+     */
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(
+            @RequestBody ResetPasswordRequest request) {
+
+        if (request.getToken() == null
+                || request.getToken().isBlank()) {
+
+            return ResponseEntity.badRequest()
+                    .body("Reset token is required");
+        }
+
+        if (request.getNewPassword() == null
+                || request.getNewPassword().length() < 6) {
+
+            return ResponseEntity.badRequest()
                     .body(
-                        "Your tutor account is not approved yet."
+                            "Password must be at least 6 characters"
                     );
+        }
+
+        boolean success = passwordResetService.resetPassword(
+                request.getToken(),
+                request.getNewPassword()
+        );
+
+        if (!success) {
+            return ResponseEntity.badRequest()
+                    .body(
+                            "Invalid or expired password reset token"
+                    );
+        }
+
+        return ResponseEntity.ok(
+                "Password reset successfully"
+        );
+    }
+
+    /*
+     * =========================
+     * REQUEST CLASSES
+     * =========================
+     */
+
+    public static class ForgotPasswordRequest {
+
+        private String email;
+
+        public String getEmail() {
+            return email;
+        }
+
+        public void setEmail(String email) {
+            this.email = email;
         }
     }
 
-    /*
-     * =========================
-     * PARENT ACCOUNT STATUS
-     * =========================
-     */
+    public static class ResetPasswordRequest {
 
-    if ("SUSPENDED".equals(user.getStatus())) {
-        return ResponseEntity.status(403)
-                .body(
-                    "Your account has been suspended. " +
-                    "Please contact support."
-                );
+        private String token;
+        private String newPassword;
+
+        public String getToken() {
+            return token;
+        }
+
+        public void setToken(String token) {
+            this.token = token;
+        }
+
+        public String getNewPassword() {
+            return newPassword;
+        }
+
+        public void setNewPassword(String newPassword) {
+            this.newPassword = newPassword;
+        }
     }
-
-    if ("BLOCKED".equals(user.getStatus())) {
-        return ResponseEntity.status(403)
-                .body(
-                    "Your account has been blocked."
-                );
-    }
-
-    /*
-     * =========================
-     * GENERATE JWT
-     * =========================
-     */
-
-    String token = jwtService.generateToken(
-            user.getEmail(),
-            user.getRole()
-    );
-
-    return ResponseEntity.ok(token);
-}
 }
