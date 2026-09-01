@@ -35,6 +35,9 @@ public class ChatMessage {
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
+    @Column(nullable = false)
+private boolean read = false;
+
     @PrePersist
     public void onCreate() {
         createdAt = LocalDateTime.now();
@@ -74,4 +77,14 @@ public class ChatMessage {
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
+
+
+    public boolean isRead() {
+    return read;
 }
+
+public void setRead(boolean read) {
+    this.read = read;
+}
+}
+

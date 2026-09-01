@@ -77,11 +77,15 @@ public class PaymentController {
         }
 
         // Session must be confirmed
-        if (!"CONFIRMED".equals(session.getStatus())) {
-            return ResponseEntity.badRequest()
-                    .body("This session is not available for payment");
-        }
+     if (!"CONFIRMED".equals(session.getStatus())) {
+    return ResponseEntity.badRequest()
+            .body("This session is not available for payment");
+}
 
+if ("DEMO".equals(session.getType())) {
+    return ResponseEntity.badRequest()
+            .body("Demo sessions are free. Please complete the demo before booking a paid session.");
+}
         // Check if payment already exists
         if (paymentRepository.findBySessionId(sessionId).isPresent()) {
             return ResponseEntity.badRequest()

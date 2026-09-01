@@ -1,4 +1,3 @@
-
 package com.findmytutor.findmytutor_backend.model;
 
 import java.time.LocalDateTime;
@@ -36,19 +35,34 @@ public class Payment {
     @JoinColumn(name = "tutor_id", nullable = false)
     private Tutor tutor;
 
+    // Total amount paid by parent
     @Column(nullable = false)
     private Double amount;
 
+    // Platform commission
     @Column(nullable = false)
     private Double platformFee;
 
+    // Amount that goes to tutor
     @Column(nullable = false)
     private Double tutorAmount;
 
+    // PENDING / PAID / FAILED / REFUNDED
     @Column(nullable = false)
     private String status = "PENDING";
 
+    // UPI / CARD / etc.
     @Column(nullable = false)
+    private String paymentMethod;
+
+    // Payment gateway transaction ID
+    private String transactionId;
+
+    // When payment record was created
+    @Column(nullable = false)
+    private LocalDateTime createdAt = LocalDateTime.now();
+
+    // When payment was successfully completed
     private LocalDateTime paidAt;
 
     public Payment() {
@@ -118,6 +132,30 @@ public class Payment {
         this.status = status;
     }
 
+    public String getPaymentMethod() {
+        return paymentMethod;
+    }
+
+    public void setPaymentMethod(String paymentMethod) {
+        this.paymentMethod = paymentMethod;
+    }
+
+    public String getTransactionId() {
+        return transactionId;
+    }
+
+    public void setTransactionId(String transactionId) {
+        this.transactionId = transactionId;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
     public LocalDateTime getPaidAt() {
         return paidAt;
     }
@@ -126,4 +164,3 @@ public class Payment {
         this.paidAt = paidAt;
     }
 }
-

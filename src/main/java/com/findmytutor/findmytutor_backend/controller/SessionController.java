@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.findmytutor.findmytutor_backend.dto.SessionResponse;
 import com.findmytutor.findmytutor_backend.model.Session;
 import com.findmytutor.findmytutor_backend.model.Tutor;
 import com.findmytutor.findmytutor_backend.model.User;
@@ -55,7 +56,11 @@ public class SessionController {
         List<Session> sessions =
                 sessionRepository.findByParentId(parent.getId());
 
-        return ResponseEntity.ok(sessions);
+        return ResponseEntity.ok(
+                sessions.stream()
+                        .map(SessionResponse::new)
+                        .toList()
+        );
     }
 
     // ==========================================
@@ -85,6 +90,10 @@ public class SessionController {
         List<Session> sessions =
                 sessionRepository.findByTutorId(tutor.getId());
 
-        return ResponseEntity.ok(sessions);
+        return ResponseEntity.ok(
+                sessions.stream()
+                        .map(SessionResponse::new)
+                        .toList()
+        );
     }
 }
