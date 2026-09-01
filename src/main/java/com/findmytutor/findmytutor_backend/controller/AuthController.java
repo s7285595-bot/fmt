@@ -192,30 +192,21 @@ public class AuthController {
      * =========================
      */
 
-    @PostMapping("/forgot-password")
-    public ResponseEntity<?> forgotPassword(
-            @RequestBody ForgotPasswordRequest request) {
+@PostMapping("/forgot-password")
+public ResponseEntity<?> forgotPassword(
+        @RequestBody ForgotPasswordRequest request) {
 
-        String token = passwordResetService
-                .createResetToken(request.getEmail());
+    boolean success = passwordResetService
+            .createResetToken(request.getEmail());
 
-        if (token == null) {
-            return ResponseEntity.ok(
-                    "If an account exists with this email, " +
-                    "a password reset link has been created."
-            );
-        }
-
-        /*
-         * Temporary development response.
-         *
-         * We will replace this with an email
-         * after SMTP/email configuration is added.
-         */
-        return ResponseEntity.ok(
-                "Password reset token created: " + token
-        );
-    }
+    /*
+     * Do not reveal whether the email exists.
+     */
+    return ResponseEntity.ok(
+            "If an account exists with this email, " +
+            "a password reset link has been created."
+    );
+}
 
     /*
      * =========================
