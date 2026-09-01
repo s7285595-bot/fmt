@@ -19,10 +19,10 @@ public class CorsConfig {
         // configuration.setAllowedOrigins(
         //         List.of("http://localhost:3000")
 
-                configuration.setAllowedOrigins(
+               configuration.setAllowedOrigins(
         List.of(
                 "http://localhost:3000",
-                "https://fmt-frontend-b7oj569rp-artizo2.vercel.app"
+                "https://fmt-frontend-topaz.vercel.app"
         )
 );
         
