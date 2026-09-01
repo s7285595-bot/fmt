@@ -16,9 +16,16 @@ public class CorsConfig {
 
         CorsConfiguration configuration = new CorsConfiguration();
 
-        configuration.setAllowedOrigins(
-                List.of("http://localhost:3000")
-        );
+        // configuration.setAllowedOrigins(
+        //         List.of("http://localhost:3000")
+
+                configuration.setAllowedOrigins(
+        List.of(
+                "http://localhost:3000",
+                "https://fmt-frontend-b7oj569rp-artizo2.vercel.app"
+        )
+);
+        
 
         configuration.setAllowedMethods(
                 List.of(
